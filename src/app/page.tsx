@@ -41,9 +41,32 @@ export default function Home() {
     user: 'Anonymous',
   });
 
-  const colors = ["red", "blue", "green", "indigo", "emerald", "slate", "gray", "blue", "fuchsia", "green"]
+  const colors = ["red", "blue", "green", "indigo", "emerald", "slate", "gray", "blue", "fuchsia", "green", "blue"]
 
-  // Fetching todos from firebase
+  const dateStr = (date: Date) => {
+    date.setDate(date.getDate() + 1);
+    date.setHours(0);
+    date.setMinutes(0);
+    date.setSeconds(0);
+    return date;
+  }
+
+  const updateExpiry = async (todoId: string) => {
+    try {
+      await updateDoc(doc(db, "todos", todoId), {
+        expiry: dateStr(new Date()),
+      });
+      setTodos((prev) =>
+        prev.map((todo) =>
+          todo.id === todoId ? { ...todo, expiry: new Date() } : todo
+        )
+      );
+    } catch (error) {
+      alert("Failed to update todo: " + (error as Error).message);
+    }
+  };
+
+  // Fetching the todos from firebase
   const fetchTodos = useCallback(async () => {
     if (loading) return;
     setLoading(true);
@@ -52,14 +75,14 @@ export default function Home() {
     if (!snap.empty) {
       const newTodos: Todo[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Todo));
       newTodos.forEach((aTodo) => {
-        // Convertingggggggggggggggggggg expiry to Date if it's a Firestore Timestamp
+        // Converting expiry to Date if it's a Firestore Timestamp
         let expiryDate = aTodo.expiry;
         if (expiryDate && (expiryDate as any).seconds) {
           expiryDate = new Date((expiryDate as any).seconds * 1000);
         } else if (typeof expiryDate === 'string') {
           expiryDate = new Date(expiryDate);
         }
-        // Only check expiry if it exists on the  first
+        // Only check expiry if it exists on the first
         if (expiryDate && expiryDate <= new Date() && !aTodo.recurring) handleDeleteTodo(aTodo.id);
         if (expiryDate && expiryDate <= new Date() && aTodo.recurring) {
           handleToggleCompleted(aTodo.id, aTodo.completed);
@@ -73,9 +96,7 @@ export default function Home() {
     setTimeout(() => {
       setLoading(false);
     }, 3000);
-  }, [loading]);
-
-  
+  }, [loading, updateExpiry]);
 
   useEffect(() => {
     if (todos.length === 0) {
@@ -93,7 +114,7 @@ export default function Home() {
     return () => unsubscribe();
   }, [router]);
 
-  //change if a todo is complete or not
+  //toggle if a todo is complete or not
   const handleToggleCompleted = async (todoId: string, currentCompleted: boolean) => {
     try {
       await updateDoc(doc(db, "todos", todoId), {
@@ -109,29 +130,7 @@ export default function Home() {
     }
   };
 
-  const dateStr = (date: Date) => {
-    date.setDate(date.getDate() + 1);
-    date.setHours(0);
-    date.setMinutes(0);
-    date.setSeconds(0);
-    return date;
-  }
-  const updateExpiry = async (todoId: string) => {
-    try {
-      await updateDoc(doc(db, "todos", todoId), {
-        expiry: dateStr(new Date()),
-      });
-      setTodos((prev) =>
-        prev.map((todo) =>
-          todo.id === todoId ? { ...todo, expiry: new Date() } : todo
-        )
-      );
-    } catch (error) {
-      alert("Failed to update todo: " + (error as Error).message);
-    }
-  };
-
-  // Add new todo to Firestore
+  // Add a new todo to Firestore
   const handleAddTodo = async () => {
     try {
       const todoData = {
@@ -143,10 +142,10 @@ export default function Home() {
       setNewTodo({
         completed: false,
         description: '',
-        expiry: new Date,
+        expiry: dateStr(new Date),
         recurring: false,
         priority: 'High',
-        color: "orange",
+        color: "",
         tags: '@new',
         title: '',
         user: 'Anonymous',
@@ -282,7 +281,7 @@ export default function Home() {
                 <input
                   type="text"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={newTodo.color}
+                  value={newTodo.color || colors[Number((Math.random() * 10).toFixed(0))]}
                   onChange={e => setNewTodo({ ...newTodo, color: e.target.value })}
                   hidden
                 />
