@@ -70,14 +70,14 @@ const Login = () => {
         )}
         <input
           type="email"
-          placeholder="Email"
+          placeholder="Email use ben11@gmail.com for testing..."
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Password use 12345678 for testing..."
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded w-full"

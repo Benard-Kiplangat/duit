@@ -12,15 +12,14 @@ import TodoListSection from "./todoList";
 type Todo = {
   id: string;
   completed: boolean,
-    description: string,
-    expiry: Date,
-    recurring: boolean,
-    priority: 'High' | 'Medium' | 'Low',
-    color: string,
-    tags: string,
-    title: string,
-    user: string,
-    [key: string]: any;
+  description: string,
+  expiry: Date,
+  recurring: boolean,
+  priority: 'High' | 'Medium' | 'Low',
+  tags: string,
+  title: string,
+  user: string,
+  [key: string]: any;
 };
 
 export default function Home() {
@@ -32,42 +31,50 @@ export default function Home() {
   const [newTodo, setNewTodo] = useState({
     completed: false,
     description: '',
-    expiry: new Date(),
+    expiry: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      date.setHours(0);
+      date.setMinutes(0);
+      date.setSeconds(0);
+      const offset = date.getTimezoneOffset() * 60 * 1000;
+      const adjustedDate = new Date(date.getTime() - offset);
+      return adjustedDate;
+    })(),
     recurring: false,
     priority: 'High',
-    color: 'orange',
     tags: '',
     title: '',
     user: 'Anonymous',
   });
-
-  const colors = ["red", "blue", "green", "indigo", "emerald", "slate", "gray", "blue", "fuchsia", "green", "blue"]
 
   const dateStr = (date: Date) => {
     date.setDate(date.getDate() + 1);
     date.setHours(0);
     date.setMinutes(0);
     date.setSeconds(0);
-    return date;
+    const offset = date.getTimezoneOffset() * 60 * 1000;
+    const adjustedDate = new Date(date.getTime() - offset);
+    return adjustedDate;
   }
-
-  const updateExpiry = async (todoId: string) => {
-    try {
-      await updateDoc(doc(db, "todos", todoId), {
-        expiry: dateStr(new Date()),
-      });
-      setTodos((prev) =>
-        prev.map((todo) =>
-          todo.id === todoId ? { ...todo, expiry: new Date() } : todo
-        )
-      );
-    } catch (error) {
-      alert("Failed to update todo: " + (error as Error).message);
-    }
-  };
 
   // Fetching the todos from firebase
   const fetchTodos = useCallback(async () => {
+    const updateExpiry = async (todoId: string) => {
+      try {
+        await updateDoc(doc(db, "todos", todoId), {
+          expiry: dateStr(new Date()),
+        });
+        setTodos((prev) =>
+          prev.map((todo) =>
+            todo.id === todoId ? { ...todo, expiry: new Date() } : todo
+          )
+        );
+      } catch (error) {
+        alert("Failed to update todo: " + (error as Error).message);
+      }
+    };
+
     if (loading) return;
     setLoading(true);
     const q = query(collection(db, "todos"));
@@ -96,7 +103,7 @@ export default function Home() {
     setTimeout(() => {
       setLoading(false);
     }, 3000);
-  }, [loading, updateExpiry]);
+  }, [loading]);
 
   useEffect(() => {
     if (todos.length === 0) {
@@ -142,10 +149,9 @@ export default function Home() {
       setNewTodo({
         completed: false,
         description: '',
-        expiry: dateStr(new Date),
+        expiry: dateStr(new Date()),
         recurring: false,
         priority: 'High',
-        color: "",
         tags: '@new',
         title: '',
         user: 'Anonymous',
@@ -221,7 +227,7 @@ export default function Home() {
         </div>
         {showInput && (
           <div className="fixed inset-0 flex items-center justify-center bg-blue-100 bg-opacity-30 z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4">Add New Todo</h3>
               <form className="space-y-3" onSubmit={e => { e.preventDefault(); handleAddTodo(); }}>
                 <input
@@ -252,8 +258,9 @@ export default function Home() {
                 <input
                   type="datetime-local"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={String(newTodo.expiry)}
+                  value={newTodo.expiry instanceof Date ? newTodo.expiry.toISOString().slice(0, 16) : newTodo.expiry}
                   onChange={e => setNewTodo({ ...newTodo, expiry: new Date(e.target.value) })}
+                  hidden
                 />
                 <input
                   type="text"
@@ -276,13 +283,6 @@ export default function Home() {
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
                   value={user?.uid || ''}
                   onChange={e => setNewTodo({ ...newTodo, user: e.target.value })}
-                  hidden
-                />
-                <input
-                  type="text"
-                  className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={newTodo.color || colors[Number((Math.random() * 10).toFixed(0))]}
-                  onChange={e => setNewTodo({ ...newTodo, color: e.target.value })}
                   hidden
                 />
                 <div className="flex justify-end space-x-2 pt-2">
