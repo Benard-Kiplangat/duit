@@ -11,7 +11,16 @@ import TodoListSection from "./todoList";
 
 type Todo = {
   id: string;
-  [key: string]: any;
+  completed: boolean,
+    description: string,
+    expiry: Date,
+    recurring: boolean,
+    priority: 'High' | 'Medium' | 'Low',
+    color: string,
+    tags: string,
+    title: string,
+    user: string,
+    [key: string]: any;
 };
 
 export default function Home() {
@@ -23,7 +32,7 @@ export default function Home() {
   const [newTodo, setNewTodo] = useState({
     completed: false,
     description: '',
-    expiry: '',
+    expiry: new Date(),
     recurring: false,
     priority: 'High',
     color: 'orange',
@@ -37,28 +46,33 @@ export default function Home() {
   // Fetching todos from firebase
   const fetchTodos = useCallback(async () => {
     if (loading) return;
-
     setLoading(true);
-
     const q = query(collection(db, "todos"));
-
     const snap = await getDocs(q);
-
     if (!snap.empty) {
-      const newTodos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      newTodos.forEach((aTodo) => {if (aTodo.expiry <= new Date() && !aTodo.recurring) handleDeleteTodo(aTodo.id)});
-      newTodos.forEach((aTodo) => {if (aTodo.expiry <= new Date() && aTodo.recurring) {
-        handleToggleCompleted(aTodo.id, aTodo.completed)
-        updateExpiry(aTodo.id);
-      }
-    });
+      // Use your Todo type for type safety
+      const newTodos: Todo[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Todo));
+      newTodos.forEach((aTodo) => {
+        // Convert expiry to Date if it's a Firestore Timestamp
+        let expiryDate = aTodo.expiry;
+        if (expiryDate && (expiryDate as any).seconds) {
+          expiryDate = new Date((expiryDate as any).seconds * 1000);
+        } else if (typeof expiryDate === 'string') {
+          expiryDate = new Date(expiryDate);
+        }
+        // Only check expiry if it exists on the todo
+        if (expiryDate && expiryDate <= new Date() && !aTodo.recurring) handleDeleteTodo(aTodo.id);
+        if (expiryDate && expiryDate <= new Date() && aTodo.recurring) {
+          handleToggleCompleted(aTodo.id, aTodo.completed);
+          updateExpiry(aTodo.id);
+        }
+      });
       setTodos(() => {
         return [...newTodos];
-        });
+      });
     }
-
     setTimeout(() => {
-      setLoading(false);      
+      setLoading(false);
     }, 3000);
   }, [loading]);
 
@@ -96,16 +110,16 @@ export default function Home() {
     }
   };
 
-  const dateStr = (date) => date.getMonth() + "/"  + (date.getDate() + 1) + "/" + date.getFullYear() + " 00:00 AM";
+  const dateStr = (date: Date) => `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} 00:00 AM`;
 
   const updateExpiry = async (todoId: string) => {
     try {
       await updateDoc(doc(db, "todos", todoId), {
-        expiry: dateStr(new Date),
+        expiry: dateStr(new Date()),
       });
       setTodos((prev) =>
         prev.map((todo) =>
-          todo.id === todoId ? { ...todo, expiry: dateStr(new Date) } : todo
+          todo.id === todoId ? { ...todo, expiry: new Date() } : todo
         )
       );
     } catch (error) {
@@ -125,7 +139,7 @@ export default function Home() {
       setNewTodo({
         completed: false,
         description: '',
-        expiry: '',
+        expiry: new Date,
         recurring: false,
         priority: 'High',
         color: "orange",
@@ -225,18 +239,18 @@ export default function Home() {
                 <select 
                 className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
                 name="priority"
-                onChange={e => setNewTodo({ ...newTodo, priority: e.target.value })}
+                value={newTodo.priority}
+                onChange={e => setNewTodo({ ...newTodo, priority: e.target.value as 'High' | 'Medium' | 'Low' })}
                 >
-                  <option className="text-slate-900" value="1" selected>High</option>
-                  <option className="text-slate-900" value="2">Medium</option>
-                  <option className="text-slate-900" value="3">Low</option>
+                  <option className="text-slate-900" value="High">High</option>
+                  <option className="text-slate-900" value="Medium">Medium</option>
+                  <option className="text-slate-900" value="Low">Low</option>
                 </select>
                 <input
-                  type="datetime"
+                  type="datetime-local"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={newTodo.expiry || dateStr(new Date)}
-                  onChange={e => setNewTodo({ ...newTodo, expiry: e.target.value })}
-                  hidden
+                  value={String(newTodo.expiry)}
+                  onChange={e => setNewTodo({ ...newTodo, expiry: new Date(e.target.value) })}
                 />
                 <input
                   type="text"
@@ -257,15 +271,15 @@ export default function Home() {
                 <input
                   type="text"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={user?.uid}
+                  value={user?.uid || ''}
                   onChange={e => setNewTodo({ ...newTodo, user: e.target.value })}
                   hidden
                 />
                 <input
                   type="text"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={colors[Number((Math.random()*10).toString().split(".")[0])]}
-                  onChange={e => setNewTodo({ ...newTodo, user: e.target.value })}
+                  value={newTodo.color}
+                  onChange={e => setNewTodo({ ...newTodo, color: e.target.value })}
                   hidden
                 />
                 <div className="flex justify-end space-x-2 pt-2">
