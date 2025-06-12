@@ -162,7 +162,6 @@ export default function Home() {
     }
   };
 
-  // Add a new todo to Firestore
   const handleAddTodo = async () => {
     try {
       const todoData = {
@@ -312,6 +311,7 @@ export default function Home() {
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
                   value={uid}
                   hidden
+                  readOnly
                 />
                 <div className="flex justify-end space-x-2 pt-2">
                   <button type="button" className="px-4 py-2 bg-gray-200 rounded cursor-pointer" onClick={() => setShowInput(false)}>Cancel</button>
