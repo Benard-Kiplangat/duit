@@ -6,7 +6,6 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { useState, useEffect, useCallback } from "react";
 import { collection, query, getDocs, doc, updateDoc, addDoc, Timestamp, deleteDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import {useAuth} from "../hooks/useAuth";
 import TodoListSection from "./todoList";
 
 type Todo = {
@@ -23,8 +22,8 @@ type Todo = {
 };
 
 export default function Home() {
-  const user = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [uid, setUid] = useState('');
   const [loading, setLoading] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [activeTab, setActiveTab] = useState("Current tasks");
@@ -45,7 +44,7 @@ export default function Home() {
     priority: 'High',
     tags: '',
     title: '',
-    user: 'Anonymous',
+    user: uid,
   });
 
   const dateStr = (date: Date) => {
@@ -77,10 +76,19 @@ export default function Home() {
 
     if (loading) return;
     setLoading(true);
+
+    if (!uid) {
+      setTodos([]);
+      setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, "todos"));
     const snap = await getDocs(q);
     if (!snap.empty) {
-      const newTodos: Todo[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Todo));
+      const newTodos: Todo[] = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() } as Todo))
+        .filter((todo) => todo.user === uid);
       newTodos.forEach((aTodo) => {
         // Converting expiry to Date if it's a Firestore Timestamp
         let expiryDate = aTodo.expiry;
@@ -103,7 +111,7 @@ export default function Home() {
     setTimeout(() => {
       setLoading(false);
     }, 3000);
-  }, [loading]);
+  }, [loading, uid]);
 
   useEffect(() => {
     if (todos.length === 0) {
@@ -114,6 +122,7 @@ export default function Home() {
   const router = useRouter();
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      setUid(user?.uid || '');
       if (!user) {
         router.replace("/login");
       }
@@ -158,6 +167,7 @@ export default function Home() {
     try {
       const todoData = {
         ...newTodo,
+        user: uid,
         expiry: newTodo.expiry ? Timestamp.fromDate(new Date(newTodo.expiry)) : null,
       };
       await addDoc(collection(db, "todos"), todoData);
@@ -170,7 +180,7 @@ export default function Home() {
         priority: 'High',
         tags: '@new',
         title: '',
-        user: 'Anonymous',
+        user: uid,
       });
       fetchTodos();
     } catch (error) {
@@ -300,8 +310,7 @@ export default function Home() {
                 <input
                   type="text"
                   className="text-slate-900 px-4 py-2 border border-orange-300 focus:outline-none focus:border-orange-500 focus:ring-orange-500 rounded mb-2 w-full"
-                  value={user?.uid || ''}
-                  onChange={e => setNewTodo({ ...newTodo, user: e.target.value })}
+                  value={uid}
                   hidden
                 />
                 <div className="flex justify-end space-x-2 pt-2">
