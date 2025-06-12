@@ -67,7 +67,7 @@ export default function Home() {
         });
         setTodos((prev) =>
           prev.map((todo) =>
-            todo.id === todoId ? { ...todo, expiry: new Date() } : todo
+            todo.id === todoId ? { ...todo, expiry: dateStr(new Date()) } : todo
           )
         );
       } catch (error) {
@@ -92,7 +92,7 @@ export default function Home() {
         // Only check expiry if it exists on the first
         if (expiryDate && expiryDate <= new Date() && !aTodo.recurring) handleDeleteTodo(aTodo.id);
         if (expiryDate && expiryDate <= new Date() && aTodo.recurring) {
-          handleToggleCompleted(aTodo.id, aTodo.completed);
+          handleToggleCompleted(aTodo.id, !!aTodo.completed);
           updateExpiry(aTodo.id);
         }
       });
@@ -130,6 +130,22 @@ export default function Home() {
       setTodos((prev) =>
         prev.map((todo) =>
           todo.id === todoId ? { ...todo, completed: !currentCompleted } : todo
+        )
+      );
+    } catch (error) {
+      alert("Failed to update todo: " + (error as Error).message);
+    }
+  };
+
+  //handling recurring items
+  const handlePersistence = async (todoId: string, recur: boolean) => {
+    try {
+      await updateDoc(doc(db, "todos", todoId), {
+        recurring: !recur,
+      });
+      setTodos((prev) =>
+        prev.map((todo) =>
+          todo.id === todoId ? { ...todo, recurring: !recur } : todo
         )
       );
     } catch (error) {
@@ -203,6 +219,7 @@ export default function Home() {
             todos={todos}
             filterFn={(todo) => todo.completed !== true}
             handleToggleCompleted={handleToggleCompleted}
+            handlePersistence={handlePersistence}
             handleDeleteTodo={handleDeleteTodo}
           />
           )}
@@ -212,6 +229,7 @@ export default function Home() {
             todos={todos}
             filterFn={(todo) => todo.completed === true}
             handleToggleCompleted={handleToggleCompleted}
+            handlePersistence={handlePersistence}
             handleDeleteTodo={handleDeleteTodo}
           />
           )}
@@ -221,6 +239,7 @@ export default function Home() {
             todos={todos}
             filterFn={(todo) => todo.recurring === true}
             handleToggleCompleted={handleToggleCompleted}
+            handlePersistence={handlePersistence}
             handleDeleteTodo={handleDeleteTodo}
           />
           )}

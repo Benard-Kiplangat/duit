@@ -20,12 +20,14 @@ export default function TodoListSection({
   todos,
   filterFn,
   handleToggleCompleted,
+  handlePersistence,
   handleDeleteTodo,
 }: {
   title: string;
   todos: Todo[];
   filterFn: (todo: Todo) => boolean;
   handleToggleCompleted: (id: string, completed: boolean) => void;
+  handlePersistence: (id: string, recurring: boolean) => void;
   handleDeleteTodo: (id: string) => void;
 }) {
   const filtered = todos.filter(filterFn);
@@ -76,7 +78,7 @@ export default function TodoListSection({
                       <input
                         type="text"
                         placeholder="Tags (comma separated)"
-                        className="focus:outline-none w-12"
+                        className="focus:outline-none w-15"
                         value={todo.tags || "@new"}
                         onChange={(e) => e.target.value}
                       />
@@ -88,16 +90,21 @@ export default function TodoListSection({
                     </span>
                     <span className="px-2 text-slate-500">|</span>
                     <span className="text-black pr-1">Recur:
-                      <input className="ml-1" type="checkbox" name="recur" id="recur"/>
+                      <input 
+                        className="ml-1"
+                        type="checkbox" 
+                        name="recur" 
+                        checked={!!todo.recurring} 
+                        onChange={() => { handlePersistence(todo.id, !!todo.recurring) }}/>
                     </span>
                   </p>
                 </div>
                 <button
                   className="px-6 pb-6 h-8 w-8 text-red-600 hover:text-red-300 text-xs py-1"
-                  title="Delete"
+                  title="\u00D7"
                   onClick={() => handleDeleteTodo(todo.id)}
                 >
-                  x
+                  {"\u00D7"}
                 </button>
               </li>
             );
