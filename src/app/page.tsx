@@ -63,10 +63,11 @@ export default function Home() {
       try {
         await updateDoc(doc(db, "todos", todoId), {
           expiry: dateStr(new Date()),
+          completed: false,
         });
         setTodos((prev) =>
           prev.map((todo) =>
-            todo.id === todoId ? { ...todo, expiry: dateStr(new Date()) } : todo
+            todo.id === todoId ? { ...todo, expiry: dateStr(new Date()), completed: false } : todo
           )
         );
       } catch (error) {
@@ -100,7 +101,6 @@ export default function Home() {
         // Only check expiry if it exists on the first
         if (expiryDate && expiryDate <= new Date() && !aTodo.recurring) handleDeleteTodo(aTodo.id);
         if (expiryDate && expiryDate <= new Date() && aTodo.recurring) {
-          handleToggleCompleted(aTodo.id, !!aTodo.completed);
           updateExpiry(aTodo.id);
         }
       });
